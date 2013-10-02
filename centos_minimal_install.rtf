@@ -17,7 +17,7 @@ ONBOOT=yes\
 NM_CONTROLLED=no\
 \
 #install gui\
-yum group install basic-desktop desktop-platform x11 fonts\
+yum groupinstall basic-desktop desktop-platform x11 fonts\
 vi /etc/inittab\
 #change 3 to 5\
 id:5:initdefault:\
@@ -25,10 +25,10 @@ id:5:initdefault:\
 # install standard programs\
 yum install -y firefox vim-common vim-enhanced vim-X11 tree wget curl\
 cd /tmp\
-wget http://dl.fedoraproject.org/epel/6/x86_64/epel-release-6.8.noarch.rpm\
-rpm -ivh epel-release-6.8.noarch.rpm\
+wget http://dl.fedoraproject.org/pub/epel/6/x86_64/epel-release-6-8.noarch.rpm\
+rpm -ivh epel-release-6-8.noarch.rpm\
 yum repolist\
-yum install colordiff\
+yum install -y colordiff\
 \
 # reboot system\
 reboot\
