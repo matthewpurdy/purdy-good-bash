@@ -1,0 +1,26 @@
+# .bashrc
+
+HISTCONTROL=erasedups
+HISTSIZE=32767
+
+umask 0022
+
+export PS1="\[\e[31;1m\][\u@\[\e[34;1m\]\H \W]# \[\e[0m\]"
+
+export PATH=/usr/local/bin:/usr/local/sbin:/usr/bin:/usr/sbin:/bin:/sbin:$HOME/bin
+
+alias sudo='sudo '
+alias grep='grep --color '
+alias tree='tree -C '
+alias diff='colordiff '
+alias ls='ls --color=tty '
+alias l='ls -F '
+alias ll='ls -lhF '
+alias lll='ls -lrthF '
+alias la='ls -ahF '
+alias lla='ls -alhF '
+alias llla='ls -alrthF '
+alias l.='ls -dF .* '
+alias ll.='ls -dlhF .* '
+alias lll.='ls -dlrthF .* '
+
