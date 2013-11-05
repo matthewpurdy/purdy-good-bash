@@ -31,7 +31,7 @@ yum install -y colordiff gcc kernel-devel kernel-headers dkms make bzip2 perl vi
 vim /root/.bashrc
 
 ## Current running kernel on Fedora, CentOS 6 and Red Hat (RHEL) 6 ##
-KERN_DIR=/usr/src/kernels/`uname -r`
+export KERN_DIR=/usr/src/kernels/`uname -r`
 
 # exit vim
 
