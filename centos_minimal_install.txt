@@ -14,8 +14,10 @@ NM_CONTROLLED=no
 # reboot network service
 service network restart
 
-#install gui
+# install gui
 yum groupinstall -y basic-desktop desktop-platform x11 fonts
+
+# set inittab to start x on boot
 vi /etc/inittab
 #change 3 to 5
 id:5:initdefault:
