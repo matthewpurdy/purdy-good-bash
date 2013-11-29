@@ -31,7 +31,7 @@ reboot
 cd /tmp
 rpm -Uvh http://dl.fedoraproject.org/pub/epel/6/x86_64/epel-release-6-8.noarch.rpm
 yum repolist
-yum install -y gcc kernel-devel kernel-headers dkms make bzip2 perl vim-common vim-enhanced vim-X11 tree curl wget unzip git firefox colordiff 
+yum install -y gcc kernel-devel kernel-headers dkms make bzip2 perl vim-common vim-enhanced vim-X11 tree curl wget unzip git git-svn gitk firefox colordiff 
 
 vim /root/.bashrc
 
