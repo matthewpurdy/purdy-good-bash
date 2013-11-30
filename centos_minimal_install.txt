@@ -30,9 +30,12 @@ reboot
 # open up a terminal and continue
 cd /tmp
 rpm -Uvh http://dl.fedoraproject.org/pub/epel/6/x86_64/epel-release-6-8.noarch.rpm
+rpm -Uvh http://linuxdownload.adobe.com/adobe-release/adobe-release-i386-1.0-1.noarch.rpm
+rpm --import /etc/pki/rpm-gpg/RPM-GPG-KEY-adobe-linux
 yum repolist
-yum install -y gcc kernel-devel kernel-headers dkms make bzip2 perl vim-common vim-enhanced vim-X11 mlocate tree curl wget unzip git git-svn gitk firefox colordiff 
+yum install -y gcc kernel-devel kernel-headers dkms make bzip2 perl vim-common vim-enhanced vim-X11 mlocate tree curl wget unzip git git-svn gitk firefox colordiff flash-plugin nspluginwrapper.i686 AdobeReader_enu PackageKit-gtk-module.i686 libcanberra-gtk2.i686 gtk2-engines.i686 
 
+# add kernel path to bashrc
 vim /root/.bashrc
 
 ## Current running kernel on Fedora, CentOS 6 and Red Hat (RHEL) 6 ##
