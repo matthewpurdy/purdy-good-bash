@@ -23,4 +23,5 @@ alias llla='ls -alrthF '
 alias l.='ls -dF .* '
 alias ll.='ls -dlhF .* '
 alias lll.='ls -dlrthF .* '
-
+alias open='xdg-open '
+alias yumrepolist='sed -n -e "/^\[/h; /priority *=/{ G; s/\n/ /; s/ity=/ity = /; p }" /etc/yum.repos.d/*.repo | sort -k3n '
