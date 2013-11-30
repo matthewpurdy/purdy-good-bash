@@ -28,10 +28,25 @@ reboot
 # startX should start automagically
 
 # open up a terminal and continue
-cd /tmp
+yum install yum-plugin-priorities
 rpm -Uvh http://dl.fedoraproject.org/pub/epel/6/x86_64/epel-release-6-8.noarch.rpm
 rpm -Uvh http://linuxdownload.adobe.com/adobe-release/adobe-release-i386-1.0-1.noarch.rpm
 rpm --import /etc/pki/rpm-gpg/RPM-GPG-KEY-adobe-linux
+
+# set priorites for yum repos
+vi /etc/yum/pluginconf.d/priorities.conf
+[main]
+enabled = 1
+check_obsoletes = 1
+
+# open up each repo in /etc/yum.repos.d and set priority=N where N is between 1 and 99 
+# Centos repos should get low number
+# other repos get higher numbers
+
+# run this command and see if the priorites are correct
+sed -n -e "/^\[/h; /priority *=/{ G; s/\n/ /; s/ity=/ity = /; p }" /etc/yum.repos.d/*.repo | sort -k3n
+
+
 yum repolist
 yum install -y gcc kernel-devel kernel-headers dkms make bzip2 perl vim-common vim-enhanced vim-X11 mlocate tree curl wget unzip git git-svn gitk firefox colordiff flash-plugin nspluginwrapper.i686 AdobeReader_enu PackageKit-gtk-module.i686 libcanberra-gtk2.i686 gtk2-engines.i686 
 
