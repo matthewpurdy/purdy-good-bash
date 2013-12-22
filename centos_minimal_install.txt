@@ -30,9 +30,7 @@ reboot
 # open up a terminal and continue
 yum install yum-plugin-priorities
 rpm -Uvh http://dl.fedoraproject.org/pub/epel/6/x86_64/epel-release-6-8.noarch.rpm
-rpm -Uvh http://linuxdownload.adobe.com/adobe-release/adobe-release-i386-1.0-1.noarch.rpm
 rpm -Uvh http://linuxdownload.adobe.com/adobe-release/adobe-release-x86_64-1.0-1.noarch.rpm
-rpm --import /etc/pki/rpm-gpg/RPM-GPG-KEY-adobe-linux
 rpm --import /etc/pki/rpm-gpg/RPM-GPG-KEY-adobe-linux
 
 # set priorites for yum repos
@@ -61,8 +59,9 @@ priority = 21 [adobe-linux-x86_64]
 priority = 22 [adobe-linux-i386]
 
 yum repolist
-yum check-update
-yum install -y gcc kernel-devel kernel-headers dkms make bzip2 perl vim-common vim-enhanced vim-X11 mlocate tree curl wget unzip git git-svn gitk firefox colordiff flash-plugin nspluginwrapper alsa-plugins-pulseaudio libcurl flash-plugin.i386 nspluginwrapper.i686 AdobeReader_enu PackageKit-gtk-module.i686 libcanberra-gtk2.i686 gtk2-engines.i686 
+#yum check-update
+yum install -y gcc kernel-devel kernel-headers dkms make bzip2 perl vim-common vim-enhanced vim-X11 mlocate tree curl wget unzip git git-svn gitk firefox colordiff nautilus-open-terminal xdg-utils 
+yum install -y flash-plugin nspluginwrapper alsa-plugins-pulseaudio libcurl AdobeReader_enu
 
 # add kernel path to bashrc
 vim /root/.bashrc
@@ -71,12 +70,4 @@ vim /root/.bashrc
 export KERN_DIR=/usr/src/kernels/`uname -r`
 
 # exit vim
-
-
-
-
-
-
-
-
 
