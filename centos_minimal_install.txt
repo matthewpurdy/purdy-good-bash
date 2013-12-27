@@ -62,6 +62,7 @@ yum repolist
 #yum check-update
 yum install -y gcc kernel-devel kernel-headers dkms make bzip2 perl vim-common vim-enhanced vim-X11 mlocate tree curl wget unzip git git-svn gitk firefox colordiff nautilus-open-terminal xdg-utils 
 yum install -y flash-plugin nspluginwrapper alsa-plugins-pulseaudio libcurl AdobeReader_enu
+yum install -y vpnc openconnect NetworkManager-openconnect
 
 # add kernel path to bashrc
 vim /root/.bashrc
