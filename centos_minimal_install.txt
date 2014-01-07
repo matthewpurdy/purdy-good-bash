@@ -79,3 +79,9 @@ export KERN_DIR=/usr/src/kernels/$(uname -r)
 
 # exit vim
 
+### note: if you are installing this os on a virtualbox vm  ####
+1. make sure you install virtualbox guest tool
+2. before doing #1 => export MAKE='/usr/bin/gmake -i'
+
+
+
