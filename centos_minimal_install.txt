@@ -1,6 +1,9 @@
 #download centos 6.4 minimal iso and mount it to VM or burn to cd  (only 342M)
 http://centos.mirrorcatalogs.com/6.4/isos/x86_64/CentOS-6.4-x86_64-minimal.iso
 
+#download centos 6.5 minimal iso and mount it to VM or burn to cd (only 398 M)
+http://mirror.umd.edu/centos/6.5/isos/x86_64/CentOS-6.5-x86_64-minimal.iso
+
 #create a VM or put in cd and boot system and install centos 6.4
 
 #once installed do the following on the new centos 6.4 system
@@ -22,7 +25,10 @@ vi /etc/inittab
 #change 3 to 5
 id:5:initdefault:
 
-# update kernel
+# update base (if you want to get the latest...it may take some time)
+yum update *
+
+# update kernel (if you only want to update kernel)
 yum update kernel*
 reboot
 # startX should start automagically
