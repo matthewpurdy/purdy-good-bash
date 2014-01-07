@@ -26,10 +26,10 @@ vi /etc/inittab
 id:5:initdefault:
 
 # update base (if you want to get the latest...it may take some time)
-yum update *
+yum -y update
 
 # update kernel (if you only want to update kernel)
-yum update kernel*
+yum -y update kernel*
 reboot
 # startX should start automagically
 
