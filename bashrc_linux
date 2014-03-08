@@ -7,7 +7,7 @@ umask 0022
 
 export PS1="\[\e[31;1m\][\u@\[\e[34;1m\]\H \W]# \[\e[0m\]"
 
-export PATH=/usr/local/bin:/usr/local/sbin:/usr/bin:/usr/sbin:/bin:/sbin:$HOME/bin
+export PATH=/usr/lib64/qt-3.3/bin:/usr/local/sbin:/usr/sbin:/sbin:/usr/local/bin:/usr/bin:/bin:$HOME/bin
 
 alias sudo='sudo '
 alias grep='grep --color '
@@ -25,3 +25,4 @@ alias ll.='ls -dlhF .* '
 alias lll.='ls -dlrthF .* '
 alias open='xdg-open '
 alias yumrepolist='sed -n -e "/^\[/h; /priority *=/{ G; s/\n/ /; s/ity=/ity = /; p }" /etc/yum.repos.d/*.repo | sort -k3n '
+alias inet='ifconfig | grep "inet "'
