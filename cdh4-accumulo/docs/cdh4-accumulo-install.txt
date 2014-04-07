@@ -1,0 +1,275 @@
+
+################################################
+# change vm swappiness
+################################################
+echo 2 > /proc/sys/vm/swappiness
+vim /etc/sysctl.conf
+# add an entry => vm.swappiness = 2
+
+################################################
+# download java sdk and extract the rpm
+################################################
+cd ~/Downloads
+wget http://download.oracle.com/otn/java/jdk/6u45-b06/jdk-6u45-linux-x64-rpm.bin
+bash jdk-6u45-linux-x64-rpm.bin
+rpm -e jdk sun-javadb-common sun-javadb-core sun-javadb-client sun-javadb-demo sun-javadb-docs sun-javadb-javadoc
+
+################################################
+# create an accumulo rpm from tarball
+################################################
+#yum install -y rpm-build
+#cd ~/Downloads
+#wget http://mirrors.ibiblio.org/apache/accumulo/1.4.4/accumulo-1.4.4-dist.tar.gz
+#tar xzvf accumulo-1.4.4-dist.tar.gz
+#chown -R root:root accumulo-1.4.4
+#tar czvf accumulo-1.4.4.tar.gz accumulo-1.4.4
+#mkdir accumulo
+#cd accumulo
+#cp <mount>/accumulo-1.4.4.spec> .
+#mv ../accumulo-1.4.4.tar.gz .
+#cp <mount>/build_rpm.bash
+#build.bash build
+
+################################################
+# create yum repo
+################################################
+
+# get cloudera cdh4 yum repo definition from cloudera
+curl http://archive.cloudera.com/cdh4/redhat/6/x86_64/cdh/cloudera-cdh4.repo > /etc/yum.repos.d/cloudera-cdh4.repo
+
+# get cloudera accumulo yum repo defination from cloudera
+curl http://archive.cloudera.com/accumulo/redhat/6/x86_64/cdh/cloudera-accumulo.repo > /etc/yum.repos.d/cloudera-accumulo.repo
+
+# if using priorities; add priorty=10 in the repo files
+
+# install apache
+yum install -y httpd
+
+# set checkconfig levels
+chkconfig --levels 235 httpd on
+
+# install required rpms for managing local yum repos
+yum install -y yum-utils createrepo
+
+# create a local yum repo of the chd4 repo
+cd /var/www/html
+mkdir yum
+cd yum
+reposync --repoid=cloudera-cdh4
+cd cloudera-cdh4
+cp ~/Downloads/jdk-6u45-linux-x64-rpm .
+#cp ~/Downloads/accumulo/build/accumulo-1.4.4-0.noarch.rpm .
+createrepo .
+
+# create a local yum repo of accumulo
+cd /var/www/html/yum
+reposync --repoid=cloudera-accumulo
+createrepo .
+
+# start httpd
+service httpd start
+
+# update yum cdh4 repo definition
+vi /etc/yum.repos.d/cloudera-cdh4.repo
+# comment out the baseurl and gpgkey
+# set the gpgcheck = 0
+# create a new baseurl to http://localhost/yum/cloudera-cdh4
+
+# update yum accumulo repo definition
+vi /etc/yum.repos.d/cloudera-accumulo.repo
+# comment out the baseurl and gpgkey
+# set the gpgcheck = 0
+# create a new baseurl to http://localhost/yum/cloudera-accumulo
+
+# verify that the changes work
+yum clean all
+yum repolist
+
+################################################
+# install jdk, zookeeper, hadoop, and accumulo binaries
+################################################
+yum install -y jdk hadoop-0.20-conf-pseudo zookeeper-server 
+yum install -y accumulo-master accumulo-monitor accumulo-gc accumulo-tracer accumulo-tserver accumulo-logger accumulo
+
+################################################
+# setup hadoop and accumulo with ssh
+################################################
+
+# turn iptables off
+service iptables stop
+chkconfig iptables off
+
+# turn all zookeeper, hadoop, and accumulo service off from starting at boot time
+chkconfig zookeeper-server off
+for x in $(ls /etc/init.d | grep hadoop); do echo $x; chkconfig $x off; done
+for x in $(ls /etc/init.d | grep accumulo); do echo $x; chkconfig $x off; done
+
+# edit /etc/ssh/ssh_config and set StrictHostKeyChecking from ask to no
+
+# create root ssh keys
+ssh-keygen -t rsa -P '' -f ~/.ssh/id_rsa
+cat ~/.ssh/id_rsa.pub >> ~/.ssh/authorized_keys
+chmod 600 ~/.ssh/authorized_keys
+
+# test keys by sshing without a password to localhost
+ssh localhost
+exit
+
+# create accumulo ssh keys
+su - accumulo
+ssh-keygen -t rsa -P '' -f ~/.ssh/id_rsa
+cat ~/.ssh/id_rsa.pub >> ~/.ssh/authorized_keys
+chmod 600 ~/.ssh/authorized_keys
+exit
+
+# test keys by sshing without a password to localhost
+ssh localhost
+exit
+
+###############################################
+# configure hadoop
+################################################
+
+# format namenode
+sudo -u hdfs hdfs namenode -format
+
+# to start hdfs from services
+for x in $(cd /etc/init.d; ls hadoop-hdfs-*); do sudo service $x start; done
+
+# create temp directory
+sudo -u hdfs hadoop fs -mkdir -p /tmp 
+sudo -u hdfs hadoop fs -chmod -R 1777 /tmp
+
+# create the mapreduce system directories
+sudo -u hdfs hadoop fs -mkdir -p /var/lib/hadoop-hdfs/cache/mapred/mapred/staging
+sudo -u hdfs hadoop fs -chmod 1777 /var/lib/hadoop-hdfs/cache/mapred/mapred/staging
+sudo -u hdfs hadoop fs -chown -R mapred /var/lib/hadoop-hdfs/cache/mapred
+
+# verify hdfs file structure
+sudo -u hdfs hadoop fs -ls -R /
+
+# start mapred from service
+for x in $(cd /etc/init.d; ls hadoop-0.20-mapreduce-*); do sudo service $x start; done
+
+# create user directories
+sudo -u hdfs hadoop fs -mkdir /user/root
+sudo -u hdfs hadoop fs -chown root /user/root
+sudo -u hdfs hadoop fs -chmod 755 /user/root
+
+################################################
+# configure hadoop-env.sh
+################################################
+
+# copy a hadoop-env.sh script and put it in /etc/hadoop/conf/
+cp /usr/lib/hadoop-0.20-mapreduce/example-confs/conf.secure/hadoop-env.sh /etc/hadoop/conf
+
+# set the hadoop to use mapreduce 1
+export HADOOP_MAPRED_HOME='/usr/lib/hadoop-0.20-mapreduce'
+
+# comment out export HADOOP_LOG_DIR
+# comment out export HADOOP_PID_DIR
+
+
+################################################
+# configure zookeeper
+################################################
+service zookeeper-server init
+
+################################################
+# configure accumulo
+################################################
+
+# verify the setting in /etc/accumulo/conf/accumulo-site.xml
+# logger.dir.walog and instance.secret you may want to change
+# if you change the logger.dir.walog make sure that directory
+# is created on all nodes with mode of 1777
+# WARNING => the memory setting may be too high for one node
+# i would cut htem in half if running a development vm under 8 gig
+
+# verify the setting in /etc/default/accumulo
+# WARNING => the memory setting expect to havd 7+ gig of ram available
+# i would cut them in half if running a development vm under 8 gigs
+# you may need to reduce them
+
+# create accumulo directories in hdfs
+sudo -u hdfs hadoop fs -mkdir /accumulo
+sudo -u hdfs hadoop fs -chown accumulo:supergroup /accumulo
+sudo -u hdfs hadoop fs -chmod 755 /accumulo
+sudo -u hdfs hadoop fs -mkdir /user/accumulo
+sudo -u hdfs hadoop fs -chown accumulo:supergroup /user/accumulo
+sudo -u hdfs hadoop fs -chmod 755 /user/accumulo
+
+# initialized accumulo master
+service accumulo-master init
+
+
+################################################
+# start services
+################################################
+#
+# you should create a script that starts these services and sleeps enough time
+# to make sure they are all started correctly
+#
+
+# start zookeeper service
+service zookeeper-server start
+
+# start hadoop services (these should already be started)
+service hadoop-hdfs-namenode start
+service hadoop-hdfs-secondarynamenode start
+
+service hadoop-hdfs-datanode start
+service hadoop-0.20-mapreduce-jobtracker start
+service hadoop-0.20-mapreduce-tasktracker start
+
+# start accumulo services
+service accumulo-master start
+service accumulo-monitor start
+service accumulo-gc start
+service accumulo-tracer start
+service accumulo-tserver start
+service accumulo-logger start
+
+################################################
+# hadoop smoke test
+################################################
+find / > find-data.txt
+hadoop fs -mkdir find
+hadoop fs -mkdir find/input
+hadoop fs -put find-data.txt find/input
+hadoop jar /usr/lib/hadoop-mapreduce/hadoop-mapreduce-examples.jar wordcount find/input find/output
+hadoop fs -cat find/output/part-r-00000 > /tmp/part-r-00000.txt
+head -n 100 /tmp/part-r-00000.txt
+
+
+################################################
+# accumulo smoke test
+################################################
+
+# login to the accumulo shell
+accumulo shell -u root -p toor
+
+# list and create tables
+tables
+create table mytable
+tables
+
+# get and set auths
+getauths
+setauths -s public
+getauths
+
+# add records into mytable
+insert -l public "john doe" contact phone 555-1212
+insert -l public "john doe" contact address "123 somestreet"
+insert -l public "john doe" contact city "sometown"
+
+insert -l public "joe shmoe" contact phone 555-8989
+insert -l public "joe shmoe" contact address "789 differentstreet"
+insert -l public "joe shmoe" contact city "differenttown"
+
+# scan table
+scan
+
+
+

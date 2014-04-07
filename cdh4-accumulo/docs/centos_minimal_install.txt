@@ -1,0 +1,94 @@
+#download centos 6.4 minimal iso and mount it to VM or burn to cd  (only 342M)
+http://centos.mirrorcatalogs.com/6.4/isos/x86_64/CentOS-6.4-x86_64-minimal.iso
+
+#download centos 6.5 minimal iso and mount it to VM or burn to cd (only 398 M)
+http://mirror.umd.edu/centos/6.5/isos/x86_64/CentOS-6.5-x86_64-minimal.iso
+
+#create a VM or put in cd and boot system and install centos 6.4
+
+#once installed do the following on the new centos 6.4 system
+
+# update network configuration
+vi /etc/sysconfig/network-scripts/ifcfg-eth0
+#change two lines
+ONBOOT=yes
+NM_CONTROLLED=no
+
+# reboot network service
+service network restart
+
+# install gui
+yum groupinstall -y basic-desktop desktop-platform x11 fonts
+
+# set inittab to start x on boot
+vi /etc/inittab
+#change 3 to 5
+id:5:initdefault:
+
+# update base (if you want to get the latest...it may take some time)
+yum -y update
+
+# update kernel (if you only want to update kernel)
+yum -y update kernel*
+reboot
+# startX should start automagically
+
+# open up a terminal and continue
+yum install yum-plugin-priorities
+rpm -Uvh
+http://dl.fedoraproject.org/pub/epel/6/x86_64/epel-release-6-8.noarch.rpm
+rpm -Uvh
+http://linuxdownload.adobe.com/adobe-release/adobe-release-x86_64-1.0-1.noarch.rpm
+rpm --import /etc/pki/rpm-gpg/RPM-GPG-KEY-adobe-linux
+
+# set priorites for yum repos
+vi /etc/yum/pluginconf.d/priorities.conf
+[main]
+enabled = 1
+check_obsoletes = 1
+
+# open up each repo in /etc/yum.repos.d and set priority=N where N is between
+# 1 and 99 
+# Centos repos should get low number
+# other repos get higher numbers
+
+# run this command and see if the priorites are correct
+sed -n -e "/^\[/h; /priority *=/{ G; s/\n/ /; s/ity=/ity = /; p }"
+/etc/yum.repos.d/*.repo | sort -k3n
+priority = 1 [base]
+priority = 1 [updates]
+priority = 2 [centosplus]
+priority = 2 [contrib]
+priority = 2 [extras]
+priority = 3 [c6-media]
+priority = 3 [debug]
+priority = 11 [epel]
+priority = 12 [epel-debuginfo]
+priority = 13 [epel-source]
+priority = 21 [adobe-linux-x86_64]
+priority = 22 [adobe-linux-i386]
+
+yum repolist
+#yum check-update
+yum install -y gcc kernel-devel kernel-headers bind-utils nmap dkms make bzip2
+perl vim-common vim-enhanced vim-X11 mlocate tree curl wget unzip git git-svn
+gitk firefox colordiff nautilus-open-terminal xdg-utils 
+yum install -y flash-plugin nspluginwrapper alsa-plugins-pulseaudio libcurl
+rpm -Uvh
+http://ardownload.adobe.com/pub/adobe/reader/unix/9.x/9.5.5/enu/AdbeRdr9.5.5-1_i486linux_enu.rpm
+yum install -y vpnc openconnect NetworkManager-openconnect
+
+# add kernel path to bashrc
+vim /root/.bashrc
+
+## Current running kernel on Fedora, CentOS 6 and Red Hat (RHEL) 6 ##
+export KERN_DIR=/usr/src/kernels/$(uname -r)
+
+# exit vim
+
+### note: if you are installing this os on a virtualbox vm  ####
+1. make sure you install virtualbox guest tool
+2. before doing #1 => export MAKE='/usr/bin/gmake -i'
+
+
+
