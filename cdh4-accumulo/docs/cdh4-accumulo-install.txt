@@ -15,22 +15,6 @@ bash jdk-6u45-linux-x64-rpm.bin
 rpm -e jdk sun-javadb-common sun-javadb-core sun-javadb-client sun-javadb-demo sun-javadb-docs sun-javadb-javadoc
 
 ################################################
-# create an accumulo rpm from tarball
-################################################
-#yum install -y rpm-build
-#cd ~/Downloads
-#wget http://mirrors.ibiblio.org/apache/accumulo/1.4.4/accumulo-1.4.4-dist.tar.gz
-#tar xzvf accumulo-1.4.4-dist.tar.gz
-#chown -R root:root accumulo-1.4.4
-#tar czvf accumulo-1.4.4.tar.gz accumulo-1.4.4
-#mkdir accumulo
-#cd accumulo
-#cp <mount>/accumulo-1.4.4.spec> .
-#mv ../accumulo-1.4.4.tar.gz .
-#cp <mount>/build_rpm.bash
-#build.bash build
-
-################################################
 # create yum repo
 ################################################
 
@@ -40,7 +24,7 @@ curl http://archive.cloudera.com/cdh4/redhat/6/x86_64/cdh/cloudera-cdh4.repo > /
 # get cloudera accumulo yum repo defination from cloudera
 curl http://archive.cloudera.com/accumulo/redhat/6/x86_64/cdh/cloudera-accumulo.repo > /etc/yum.repos.d/cloudera-accumulo.repo
 
-# if using priorities; add priorty=10 in the repo files
+# if using priorities; add priorty=10 in the repo files => make sure he priority is higher than centos and lower than epel
 
 # install apache
 yum install -y httpd
@@ -58,7 +42,6 @@ cd yum
 reposync --repoid=cloudera-cdh4
 cd cloudera-cdh4
 cp ~/Downloads/jdk-6u45-linux-x64-rpm .
-#cp ~/Downloads/accumulo/build/accumulo-1.4.4-0.noarch.rpm .
 createrepo .
 
 # create a local yum repo of accumulo
@@ -115,13 +98,6 @@ chmod 600 ~/.ssh/authorized_keys
 ssh localhost
 exit
 
-# create accumulo ssh keys
-su - accumulo
-ssh-keygen -t rsa -P '' -f ~/.ssh/id_rsa
-cat ~/.ssh/id_rsa.pub >> ~/.ssh/authorized_keys
-chmod 600 ~/.ssh/authorized_keys
-exit
-
 # test keys by sshing without a password to localhost
 ssh localhost
 exit
@@ -163,6 +139,8 @@ sudo -u hdfs hadoop fs -chmod 755 /user/root
 # copy a hadoop-env.sh script and put it in /etc/hadoop/conf/
 cp /usr/lib/hadoop-0.20-mapreduce/example-confs/conf.secure/hadoop-env.sh /etc/hadoop/conf
 
+# edit /etc/hadoop/conf/hadoop-env.sh with the following:
+
 # set the hadoop to use mapreduce 1
 export HADOOP_MAPRED_HOME='/usr/lib/hadoop-0.20-mapreduce'
 
@@ -184,10 +162,10 @@ service zookeeper-server init
 # if you change the logger.dir.walog make sure that directory
 # is created on all nodes with mode of 1777
 # WARNING => the memory setting may be too high for one node
-# i would cut htem in half if running a development vm under 8 gig
+# i would cut them in half if running a development vm under 8 gig
 
 # verify the setting in /etc/default/accumulo
-# WARNING => the memory setting expect to havd 7+ gig of ram available
+# WARNING => the memory setting expect to have 7+ gig of ram available
 # i would cut them in half if running a development vm under 8 gigs
 # you may need to reduce them
 
@@ -208,7 +186,7 @@ service accumulo-master init
 ################################################
 #
 # you should create a script that starts these services and sleeps enough time
-# to make sure they are all started correctly
+# to make sure they are all started correctly (see scripts)
 #
 
 # start zookeeper service
@@ -217,8 +195,8 @@ service zookeeper-server start
 # start hadoop services (these should already be started)
 service hadoop-hdfs-namenode start
 service hadoop-hdfs-secondarynamenode start
-
 service hadoop-hdfs-datanode start
+
 service hadoop-0.20-mapreduce-jobtracker start
 service hadoop-0.20-mapreduce-tasktracker start
 
@@ -233,7 +211,10 @@ service accumulo-logger start
 ################################################
 # hadoop smoke test
 ################################################
+# create a file with all the systems file structure
 find / > find-data.txt
+# replace all '/' with ' ' in find-data.txt
+sed -i "s/\// /g" find-data.txt
 hadoop fs -mkdir find
 hadoop fs -mkdir find/input
 hadoop fs -put find-data.txt find/input
