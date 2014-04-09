@@ -1,5 +1,10 @@
 
 ################################################
+# disable selinux
+################################################
+sed -i "s/SELINUX=enforcing/SELINUX=disabled/" /etc/selinux/config
+
+################################################
 # change vm swappiness
 ################################################
 echo 2 > /proc/sys/vm/swappiness
@@ -98,10 +103,6 @@ chmod 600 ~/.ssh/authorized_keys
 ssh localhost
 exit
 
-# test keys by sshing without a password to localhost
-ssh localhost
-exit
-
 ###############################################
 # configure hadoop
 ################################################
@@ -131,22 +132,6 @@ for x in $(cd /etc/init.d; ls hadoop-0.20-mapreduce-*); do sudo service $x start
 sudo -u hdfs hadoop fs -mkdir /user/root
 sudo -u hdfs hadoop fs -chown root /user/root
 sudo -u hdfs hadoop fs -chmod 755 /user/root
-
-################################################
-# configure hadoop-env.sh
-################################################
-
-# copy a hadoop-env.sh script and put it in /etc/hadoop/conf/
-cp /usr/lib/hadoop-0.20-mapreduce/example-confs/conf.secure/hadoop-env.sh /etc/hadoop/conf
-
-# edit /etc/hadoop/conf/hadoop-env.sh with the following:
-
-# set the hadoop to use mapreduce 1
-export HADOOP_MAPRED_HOME='/usr/lib/hadoop-0.20-mapreduce'
-
-# comment out export HADOOP_LOG_DIR
-# comment out export HADOOP_PID_DIR
-
 
 ################################################
 # configure zookeeper
@@ -251,6 +236,4 @@ insert -l public "joe shmoe" contact city "differenttown"
 
 # scan table
 scan
-
-
 
