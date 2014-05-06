@@ -83,5 +83,11 @@ export KERN_DIR=/usr/src/kernels/$(uname -r)
 1. make sure you install virtualbox guest tool
 2. before doing #1 => export MAKE='/usr/bin/gmake -i'
 
+### if you want to disable selinux
+sed -i "s/SELINUX=enforcing/SELINUX=disabled/" /etc/selinux/config
 
+### if you want to change vm swappiness
+echo 2 > /proc/sys/vm/swappiness
+vim /etc/sysctl.conf
+# add an entry => vm.swappiness = 2
 
