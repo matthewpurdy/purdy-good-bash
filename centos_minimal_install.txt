@@ -37,6 +37,7 @@ reboot
 yum install yum-plugin-priorities
 rpm -Uvh http://dl.fedoraproject.org/pub/epel/6/x86_64/epel-release-6-8.noarch.rpm
 rpm -Uvh http://linuxdownload.adobe.com/adobe-release/adobe-release-x86_64-1.0-1.noarch.rpm
+rpm -Uvh http://linuxdownload.adobe.com/adobe-release/adobe-release-i386-1.0-1.noarch.rpm
 rpm --import /etc/pki/rpm-gpg/RPM-GPG-KEY-adobe-linux
 
 # set priorites for yum repos
@@ -58,17 +59,19 @@ priority = 2 [contrib]
 priority = 2 [extras]
 priority = 3 [c6-media]
 priority = 3 [debug]
-priority = 11 [epel]
-priority = 12 [epel-debuginfo]
-priority = 13 [epel-source]
-priority = 21 [adobe-linux-x86_64]
-priority = 22 [adobe-linux-i386]
+priority = 31 [epel]
+priority = 32 [epel-debuginfo]
+priority = 33 [epel-source]
+priority = 51 [adobe-linux-x86_64]
+priority = 52 [adobe-linux-i386]
 
 yum repolist
 #yum check-update
 yum install -y gcc kernel-devel kernel-headers bind-utils nmap dkms make bzip2 perl vim-common vim-enhanced vim-X11 mlocate tree curl wget unzip git git-svn gitk firefox colordiff nautilus-open-terminal xdg-utils 
 yum install -y flash-plugin nspluginwrapper alsa-plugins-pulseaudio libcurl
-rpm -Uvh http://ardownload.adobe.com/pub/adobe/reader/unix/9.x/9.5.5/enu/AdbeRdr9.5.5-1_i486linux_enu.rpm
+curl http://ardownload.adobe.com/pub/adobe/reader/unix/9.x/9.5.5/enu/AdbeRdr9.5.5-1_i486linux_enu.rpm > /tmp/AdbeRdr9.5.5-1_i486linux_enu.rpm
+yum install nspluginwrapper.i686 libcanberra-gtk2.i686 gtk2-engines.i686 PackageKit-gtk-module.i686
+yum localinstall /tmp/AdbeRdr9.5.5-1_i486linux_enu.rpm
 yum install -y vpnc openconnect NetworkManager-openconnect
 
 # add kernel path to bashrc
@@ -86,8 +89,8 @@ export KERN_DIR=/usr/src/kernels/$(uname -r)
 ### if you want to disable selinux
 sed -i "s/SELINUX=enforcing/SELINUX=disabled/" /etc/selinux/config
 
-### if you want to change vm swappiness
-echo 2 > /proc/sys/vm/swappiness
+### if you want to change vm swappiness (default is 60)
+echo 10 > /proc/sys/vm/swappiness
 vim /etc/sysctl.conf
-# add an entry => vm.swappiness = 2
+# add an entry => vm.swappiness = 10
 
