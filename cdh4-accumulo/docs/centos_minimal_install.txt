@@ -1,4 +1,5 @@
-#download centos 6.4 minimal iso and mount it to VM or burn to cd  (only 342M)
+
+#download centos 6.4 minimal iso and mount it to VM or burn to cd (only 342M)
 http://centos.mirrorcatalogs.com/6.4/isos/x86_64/CentOS-6.4-x86_64-minimal.iso
 
 #download centos 6.5 minimal iso and mount it to VM or burn to cd (only 398 M)
@@ -35,10 +36,9 @@ reboot
 
 # open up a terminal and continue
 yum install yum-plugin-priorities
-rpm -Uvh
-http://dl.fedoraproject.org/pub/epel/6/x86_64/epel-release-6-8.noarch.rpm
-rpm -Uvh
-http://linuxdownload.adobe.com/adobe-release/adobe-release-x86_64-1.0-1.noarch.rpm
+rpm -Uvh http://dl.fedoraproject.org/pub/epel/6/x86_64/epel-release-6-8.noarch.rpm
+rpm -Uvh http://linuxdownload.adobe.com/adobe-release/adobe-release-x86_64-1.0-1.noarch.rpm
+rpm -Uvh http://linuxdownload.adobe.com/adobe-release/adobe-release-i386-1.0-1.noarch.rpm
 rpm --import /etc/pki/rpm-gpg/RPM-GPG-KEY-adobe-linux
 
 # set priorites for yum repos
@@ -47,14 +47,12 @@ vi /etc/yum/pluginconf.d/priorities.conf
 enabled = 1
 check_obsoletes = 1
 
-# open up each repo in /etc/yum.repos.d and set priority=N where N is between
-# 1 and 99 
+# open up each repo in /etc/yum.repos.d and set priority=N where N is between 1 and 99
 # Centos repos should get low number
 # other repos get higher numbers
 
 # run this command and see if the priorites are correct
-sed -n -e "/^\[/h; /priority *=/{ G; s/\n/ /; s/ity=/ity = /; p }"
-/etc/yum.repos.d/*.repo | sort -k3n
+sed -n -e "/^\[/h; /priority *=/{ G; s/\n/ /; s/ity=/ity = /; p }" /etc/yum.repos.d/*.repo | sort -k3n
 priority = 1 [base]
 priority = 1 [updates]
 priority = 2 [centosplus]
@@ -62,20 +60,19 @@ priority = 2 [contrib]
 priority = 2 [extras]
 priority = 3 [c6-media]
 priority = 3 [debug]
-priority = 11 [epel]
-priority = 12 [epel-debuginfo]
-priority = 13 [epel-source]
-priority = 21 [adobe-linux-x86_64]
-priority = 22 [adobe-linux-i386]
+priority = 31 [epel]
+priority = 32 [epel-debuginfo]
+priority = 33 [epel-source]
+priority = 51 [adobe-linux-x86_64]
+priority = 52 [adobe-linux-i386]
 
 yum repolist
 #yum check-update
-yum install -y gcc kernel-devel kernel-headers bind-utils nmap dkms make bzip2
-perl vim-common vim-enhanced vim-X11 mlocate tree curl wget unzip git git-svn
-gitk firefox colordiff nautilus-open-terminal xdg-utils 
+yum install -y gcc kernel-devel kernel-headers bind-utils nmap dkms make bzip2 perl vim-common vim-enhanced vim-X11 mlocate tree curl wget unzip git git-svn gitk firefox colordiff nautilus-open-terminal xdg-utils
 yum install -y flash-plugin nspluginwrapper alsa-plugins-pulseaudio libcurl
-rpm -Uvh
-http://ardownload.adobe.com/pub/adobe/reader/unix/9.x/9.5.5/enu/AdbeRdr9.5.5-1_i486linux_enu.rpm
+curl http://ardownload.adobe.com/pub/adobe/reader/unix/9.x/9.5.5/enu/AdbeRdr9.5.5-1_i486linux_enu.rpm > /tmp/AdbeRdr9.5.5-1_i486linux_enu.rpm
+yum install nspluginwrapper.i686 libcanberra-gtk2.i686 gtk2-engines.i686 PackageKit-gtk-module.i686
+yum localinstall /tmp/AdbeRdr9.5.5-1_i486linux_enu.rpm
 yum install -y vpnc openconnect NetworkManager-openconnect
 
 # add kernel path to bashrc
@@ -86,9 +83,14 @@ export KERN_DIR=/usr/src/kernels/$(uname -r)
 
 # exit vim
 
-### note: if you are installing this os on a virtualbox vm  ####
+### note: if you are installing this os on a virtualbox vm ####
 1. make sure you install virtualbox guest tool
 2. before doing #1 => export MAKE='/usr/bin/gmake -i'
 
+### if you want to disable selinux
+sed -i "s/SELINUX=enforcing/SELINUX=disabled/" /etc/selinux/config
 
-
+### if you want to change vm swappiness (default is 60)
+echo 10 > /proc/sys/vm/swappiness
+vim /etc/sysctl.conf
+# add an entry => vm.swappiness = 10
