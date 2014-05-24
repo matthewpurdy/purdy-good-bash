@@ -158,9 +158,6 @@ service zookeeper-server init
 sudo -u hdfs hadoop fs -mkdir /accumulo
 sudo -u hdfs hadoop fs -chown accumulo:supergroup /accumulo
 sudo -u hdfs hadoop fs -chmod 755 /accumulo
-sudo -u hdfs hadoop fs -mkdir /user/accumulo
-sudo -u hdfs hadoop fs -chown accumulo:supergroup /user/accumulo
-sudo -u hdfs hadoop fs -chmod 755 /user/accumulo
 
 # initialized accumulo master
 service accumulo-master init
