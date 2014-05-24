@@ -1,0 +1,6 @@
+# example dhcp ip address
+DEVICE=eth1
+TYPE=Ethernet
+BOOTPROTO=dhcp
+HWADDR=aa:bb:cc:dd:ee:ff
+NM_CONTROLLED=no
