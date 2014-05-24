@@ -214,7 +214,7 @@ accumulo shell -u root -p toor
 
 # list and create tables
 tables
-create table mytable
+createtable mytable
 tables
 
 # get and set auths
