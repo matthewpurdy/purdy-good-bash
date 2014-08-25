@@ -46,7 +46,7 @@ mkdir yum
 cd yum
 reposync --repoid=cloudera-cdh4
 cd cloudera-cdh4
-cp ~/Downloads/jdk-6u45-linux-x64-rpm .
+cp ~/Downloads/jdk-6u45-linux-x64.rpm .
 createrepo .
 
 # create a local yum repo of accumulo
