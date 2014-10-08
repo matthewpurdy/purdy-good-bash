@@ -1,0 +1,167 @@
+
+################################################
+# disable selinux
+################################################
+sed -i "s/SELINUX=enforcing/SELINUX=disabled/" /etc/selinux/config
+
+################################################
+# change vm swappiness
+################################################
+echo 2 > /proc/sys/vm/swappiness
+vim /etc/sysctl.conf
+# add an entry => vm.swappiness = 2
+
+################################################
+# download java sdk and extract the rpm
+################################################
+cd ~/Downloads
+# note: oracle will make you first go to their site 
+wget http://download.oracle.com/otn-pub/java/jdk/7u67-b01/jdk-7u67-linux-x64.rpm
+# remove open jdk
+rpm -e jdk sun-javadb-common sun-javadb-core sun-javadb-client sun-javadb-demo sun-javadb-docs sun-javadb-javadoc
+
+################################################
+# create yum repo
+################################################
+
+# get cloudera cdh4 yum repo definition from cloudera
+curl http://archive.cloudera.com/cdh5/redhat/6/x86_64/cdh/cloudera-cdh5.repo > /etc/yum.repos.d/cloudera-cdh5.repo
+
+# if using priorities; add priorty=10 in the repo files => make sure he priority is higher than centos and lower than epel
+
+# install apache
+yum install -y httpd
+
+# set checkconfig levels
+chkconfig --levels 235 httpd on
+
+# install required rpms for managing local yum repos
+yum install -y yum-utils createrepo
+
+# create a local yum repo of the cdh5 repo
+cd /var/www/html
+mkdir yum
+cd yum
+reposync --repoid=cloudera-cdh5
+cd cloudera-cdh5
+cp ~/Downloads/jdk-7u67-linux-x64.rpm .
+createrepo .
+
+# start httpd
+service httpd start
+
+# update yum cdh5 repo definition
+vi /etc/yum.repos.d/cloudera-cdh5.repo
+# comment out the baseurl and gpgkey
+# set the gpgcheck = 0
+# create a new baseurl to http://localhost/yum/cloudera-cdh5
+
+# verify that the changes work
+yum clean all
+yum repolist
+
+################################################
+# install jdk, hadoop, and spark binaries
+################################################
+yum install -y jdk hadoop-conf-pseudo 
+yum install -y spark-core spark-master spark-worker spark-history-server spark-python
+
+################################################
+# setup hadoop and accumulo with ssh
+################################################
+
+# turn iptables off
+service iptables stop
+service ip6tables stop
+chkconfig iptables off
+chkconfig ip6tables off
+
+# edit /etc/ssh/ssh_config and set StrictHostKeyChecking from ask to no
+
+# create root ssh keys
+ssh-keygen -t rsa -P '' -f ~/.ssh/id_rsa
+cat ~/.ssh/id_rsa.pub >> ~/.ssh/authorized_keys
+chmod 600 ~/.ssh/authorized_keys
+
+# test keys by sshing without a password to localhost
+ssh localhost
+exit
+
+###############################################
+# configure hadoop
+################################################
+
+# format namenode
+sudo -u hdfs hdfs namenode -format
+
+# to start hdfs from services
+for x in $(cd /etc/init.d; ls hadoop-hdfs-*); do sudo service $x start; done
+
+# create hdfs directories for hadoop
+sudo -u hdfs hdfs dfs -mkdir -p /tmp/hadoop-yarn/staging/history/done_intermediate
+sudo -u hdfs hdfs dfs -chown -R mapred:mapred /tmp/hadoop-yarn/staging
+sudo -u hdfs hdfs dfs -chmod -R 1777 /tmp
+sudo -u hdfs hdfs dfs -mkdir -p /var/log/hadoop-yarn
+sudo -u hdfs hdfs dfs -chown yarn:mapred /var/log/hadoop-yarn
+sudo -u hdfs hdfs dfs -mkdir -p /var/log/yarn
+sudo -u hdfs hdfs dfs -chown yarn:mapred /var/log/hadoop-yarn
+
+# verify hdfs file structure
+sudo -u hdfs hadoop fs -ls -R /
+
+# create user directories
+sudo -u hdfs hdfs dfs -mkdir -p /user/root
+sudo -u hdfs hdfs dfs -chown root /user/root
+sudo -u hdfs hdfs dfs -chmod 755 /user/root
+
+# start mapred from service
+sudo service hadoop-yarn-resourcemanager start
+sudo service hadoop-yarn-nodemanager start
+sudo service hadoop-yarn-mapreduce-historyserver start
+
+
+################################################
+# start services
+################################################
+
+# start hadoop services (these should already be started)
+service hadoop-hdfs-namenode start
+service hadoop-hdfs-secondarynamenode start
+service hadoop-hdfs-datanode start
+
+service hadoop-mapreduce-historyserver start
+service hadoop-yarn-nodemanager start
+service hadoop-yarn-resourcemanager start
+
+################################################
+# spark configuration
+################################################
+# edit your bashrc and add
+export HADOOP_CONF_DIR=/etc/hadoop/conf/
+
+# put spark jar in hdfs
+sudo -u hdfs hdfs dfs -mkdir -p /user/spark/share/lib
+sudo -u hdfs hdfs dfs -put /usr/lib/spark/assembly/lib/spark-assembly-* /user/spark/share/lib/spark-assembly.jar
+
+################################################
+# hadoop smoke test
+################################################
+# create a file with all the systems file structure
+find / > find-data.txt
+# replace all '/' with ' ' in find-data.txt
+sed -i "s/\// /g" find-data.txt
+hdfs dfs -mkdir find
+hdfs dfs -mkdir find/input
+hdfs dfs -put find-data.txt find/input
+hadoop jar /usr/lib/hadoop-mapreduce/hadoop-mapreduce-examples.jar wordcount find/input find/output
+hdfs dfs -cat find/output/part-r-00000 > /tmp/part-r-00000.txt
+head -n 100 /tmp/part-r-00000.txt
+
+################################################
+# spark smoke test
+################################################
+export HADOOP_CONF_DIR=/etc/hadoop/conf/
+spark-submit --class org.apache.spark.examples.SparkPi --master yarn-cluster --executor-memory 500M --num-executors 2 /usr/lib/spark/examples/lib/spark-examples_2.10-1.0.0-cdh5.1.3.jar 100
+# the path below will vary based on job timestamp, job run number, and cluster hostname
+hdfs dfs -cat /var/log/hadoop-yarn/apps/root/logs/application_1412777141370_0004/cdh5-spark.purdygood.org_51906 | grep 'Pi is roughly'
+
