@@ -24,7 +24,7 @@ rpm -e jdk sun-javadb-common sun-javadb-core sun-javadb-client sun-javadb-demo s
 # create yum repo
 ################################################
 
-# get cloudera cdh4 yum repo definition from cloudera
+# get cloudera cdh5 yum repo definition from cloudera
 curl http://archive.cloudera.com/cdh5/redhat/6/x86_64/cdh/cloudera-cdh5.repo > /etc/yum.repos.d/cloudera-cdh5.repo
 
 # if using priorities; add priorty=10 in the repo files => make sure he priority is higher than centos and lower than epel
@@ -67,7 +67,7 @@ yum install -y jdk hadoop-conf-pseudo
 yum install -y spark-core spark-master spark-worker spark-history-server spark-python
 
 ################################################
-# setup hadoop and accumulo with ssh
+# setup hadoop and spark with ssh
 ################################################
 
 # turn iptables off
@@ -77,6 +77,7 @@ chkconfig iptables off
 chkconfig ip6tables off
 
 # edit /etc/ssh/ssh_config and set StrictHostKeyChecking from ask to no
+sed -i "s/# *StrictHostKeyChecking ask/StrictHostKeyChecking no/" /etc/ssh/ssh_config
 
 # create root ssh keys
 ssh-keygen -t rsa -P '' -f ~/.ssh/id_rsa
