@@ -1,0 +1,256 @@
+
+################################################
+# disable selinux
+################################################
+sed -i "s/SELINUX=enforcing/SELINUX=disabled/" /etc/selinux/config
+
+################################################
+# change vm swappiness
+################################################
+echo 2 > /proc/sys/vm/swappiness
+vim /etc/sysctl.conf
+# add an entry => vm.swappiness = 2
+
+################################################
+# download java sdk and extract the rpm
+################################################
+cd ~/Downloads
+wget http://download.oracle.com/otn-pub/java/jdk/7u67-b01/jdk-7u67-linux-x64.rpm
+rpm -e jdk sun-javadb-common sun-javadb-core sun-javadb-client sun-javadb-demo sun-javadb-docs sun-javadb-javadoc
+
+################################################
+# create yum repo
+################################################
+
+# get cloudera cdh5 yum repo definitionon from cloudera
+curl http://archive.cloudera.com/cdh5/redhat/6/x86_64/cdh/cloudera-cdh5.repo > /etc/yum.repos.d/cloudera-cdh5.repo
+
+# get cloudera accumulo yum repo defination from cloudera
+curl http://archive.cloudera.com/accumulo-c5/redhat/6/x86_64/cdh/cloudera-accumulo.repo > /etc/yum.repos.d/cloudera-accumulo.repo
+
+# if using priorities; add priorty=10 in the repo files => make sure he priority is higher than centos and lower than epel
+
+# install apache
+yum install -y httpd
+
+# set checkconfig levels
+chkconfig --levels 235 httpd on
+
+# install required rpms for managing local yum repos
+yum install -y yum-utils createrepo
+
+# create a local yum repo of the chd4 repo
+cd /var/www/html
+mkdir yum
+cd yum
+reposync --repoid=cloudera-cdh5
+cd cloudera-cdh5
+cp ~/Downloads/jdk-7u67-linux-x64.rpm .
+createrepo .
+
+# create a local yum repo of accumulo
+cd /var/www/html/yum
+reposync --repoid=cloudera-accumulo
+createrepo .
+
+# start httpd
+service httpd start
+
+# update yum cdh5 repo definition
+vi /etc/yum.repos.d/cloudera-cdh5.repo
+# comment out the baseurl and gpgkey
+# set the gpgcheck = 0
+# create a new baseurl to http://localhost/yum/cloudera-cdh5
+
+# update yum accumulo repo definition
+vi /etc/yum.repos.d/cloudera-accumulo.repo
+# comment out the baseurl and gpgkey
+# set the gpgcheck = 0
+# create a new baseurl to http://localhost/yum/cloudera-accumulo
+
+# verify that the changes work
+yum clean all
+yum repolist
+
+################################################
+# install jdk, zookeeper, hadoop, and accumulo binaries
+################################################
+yum install -y jdk hadoop-conf-pseudo zookeeper-server 
+yum install -y accumulo-master accumulo-monitor accumulo-gc accumulo-tracer accumulo-tserver accumulo-logger accumulo
+
+################################################
+# setup hadoop and accumulo with ssh
+################################################
+
+# turn iptables off
+service iptables stop
+service ip6tables stop
+chkconfig iptables off
+chkconfig ip6tables off
+
+# turn all accumulo service off from starting at boot time
+# you need to use a script to start/stop the accumulo services
+# note: zookeeper and hadoop service are okay to start at boot time 
+# however accumulo seems to trip over itself on a pseudo cluster
+for x in $(ls /etc/init.d | grep accumulo); do echo $x; chkconfig $x off; done
+
+# edit /etc/ssh/ssh_config and set StrictHostKeyChecking from ask to no
+sed -i "s/# *StrictHostKeyChecking ask/StrictHostKeyChecking no" /etc/ssh/ssh_config
+
+# create root ssh keys
+ssh-keygen -t rsa -P '' -f ~/.ssh/id_rsa
+cat ~/.ssh/id_rsa.pub >> ~/.ssh/authorized_keys
+chmod 600 ~/.ssh/authorized_keys
+
+# test keys by sshing without a password to localhost
+ssh localhost
+exit
+
+###############################################
+# configure hadoop
+################################################
+
+# export hadoop client home; this is need to use yarn
+export HADOOP_CLIENT_HOME=/usr/lib/hadoop/client
+
+# format namenode
+sudo -u hdfs hdfs namenode -format
+
+# to start hdfs from services
+for x in $(cd /etc/init.d; ls hadoop-hdfs-*); do sudo service $x start; done
+
+# create hdfs directories for hadoop
+sudo -u hdfs hdfs dfs -mkdir -p /tmp/hadoop-yarn/staging/history/done_intermediate
+sudo -u hdfs hdfs dfs -chown -R mapred:mapred /tmp/hadoop-yarn/staging
+sudo -u hdfs hdfs dfs -chmod -R 1777 /tmp
+sudo -u hdfs hdfs dfs -mkdir -p /var/log/hadoop-yarn
+sudo -u hdfs hdfs dfs -chown yarn:mapred /var/log/hadoop-yarn
+sudo -u hdfs hdfs dfs -mkdir -p /var/log/yarn
+sudo -u hdfs hdfs dfs -chown yarn:mapred /var/log/hadoop-yarn
+
+# verify hdfs file structure
+sudo -u hdfs hadoop fs -ls -R /
+
+# create user directories
+sudo -u hdfs hdfs dfs -mkdir -p /user/root
+sudo -u hdfs hdfs dfs -chown root /user/root
+sudo -u hdfs hdfs dfs -chmod 755 /user/root
+
+# start mapred from service
+for x in $(cd /etc/init.d; ls hadoop-yarn-*); do sudo service $x start; done
+
+################################################
+# configure zookeeper
+################################################
+
+# ignore No myid comment when running the next line
+service zookeeper-server init 
+
+################################################
+# configure accumulo
+################################################
+
+# verify the setting in /etc/accumulo/conf/accumulo-site.xml
+# logger.dir.walog and instance.secret you may want to change
+# if you change the logger.dir.walog make sure that directory
+# is created on all nodes with mode of 1777
+# WARNING => the memory setting may be too high for one node
+# i would cut them in half if running a development vm under 8 gig
+
+# verify the setting in /etc/default/accumulo
+# WARNING => the memory setting expect to have 7+ gig of ram available
+# i would cut them in half if running a development vm under 8 gigs
+# you may need to reduce them
+
+# create accumulo directories in hdfs
+sudo -u hdfs hdfs dfs -mkdir /accumulo
+sudo -u hdfs hdfs dfs -chown accumulo:supergroup /accumulo
+sudo -u hdfs hdfs dfs -chmod 755 /accumulo
+sudo -u hdfs hdfs dfs -mkdir -p /user/accumulo
+sudo -u hdfs hdfs dfs -chown accumulo:supergroup /user/accumulo
+sudo -u hdfs hdfs dfs -chmod 755 /user/accumulo
+
+# export hadoop client home into bashrc; this is need to use yarn
+export HADOOP_CLIENT_HOME=/usr/lib/hadoop/client >> /root/.bashrc
+
+# initialized accumulo master
+service accumulo-master init
+
+################################################
+# start services
+################################################
+#
+# you should create a script that starts these services and sleeps enough time
+# to make sure they are all started correctly (see scripts)
+#
+
+# start zookeeper service
+service zookeeper-server start
+
+# start hadoop services (these should already be started)
+service hadoop-hdfs-namenode start
+service hadoop-hdfs-secondarynamenode start
+service hadoop-hdfs-datanode start
+
+service hadoop-mapreduce-historyserver start
+service hadoop-yarn-nodemanager start
+service hadoop-yarn-resourcemanager start
+
+# start accumulo services
+service accumulo-master start
+service accumulo-monitor start
+service accumulo-gc start
+service accumulo-tracer start
+service accumulo-tserver start
+
+################################################
+# hadoop smoke test
+################################################
+# create a file with all the systems file structure
+find / > find-data.txt
+# replace all '/' with ' ' in find-data.txt
+sed -i "s/\// /g" find-data.txt
+hdfs dfs -mkdir find
+hdfs dfs -mkdir find/input
+hdfs dfs -put find-data.txt find/input
+hadoop jar /usr/lib/hadoop-mapreduce/hadoop-mapreduce-examples.jar wordcount find/input find/output
+hdfs dfs -cat find/output/part-r-00000 > /tmp/part-r-00000.txt
+head -n 100 /tmp/part-r-00000.txt
+
+################################################
+# accumulo smoke test
+################################################
+
+# login to the accumulo shell
+accumulo shell -u root -p toor
+
+# create a table mytable
+createtable mytable
+
+# change to mytable
+table mytable
+
+# add records into mytable
+insert -l public "john doe" contact phone 555-1212
+insert -l public "john doe" contact address "123 somestreet"
+insert -l public "john doe" contact city "sometown"
+
+insert -l public "joe shmoe" contact phone 555-8989
+insert -l public "joe shmoe" contact address "789 differentstreet"
+insert -l public "joe shmoe" contact city "differenttown"
+
+# scan table
+scan
+
+# get auths
+getauths
+
+# set auths to public
+setauths -s public
+
+# get auths
+getauths
+
+# scan to see new inputed records
+scan
+
