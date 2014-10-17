@@ -3,9 +3,6 @@
 #download centos 6.5 minimal iso and mount it to VM or burn to cd (only 398 MG)
 http://mirror.umd.edu/centos/6.5/isos/x86_64/CentOS-6.5-x86_64-minimal.iso
 
-#download centos 7.0 minimal iso and mount it to VM or burn to cd (only 566 MG)
-http://www.gtlib.gatech.edu/pub/centos/7.0.1406/isos/x86_64/CentOS-7.0-1406-x86_64-Minimal.iso
-
 #create a VM or put in cd and boot system and install centos
 
 #once installed do the following on the new centos system
