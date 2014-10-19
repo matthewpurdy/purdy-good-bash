@@ -1,0 +1,93 @@
+
+#download centos 7.0 minimal iso and mount it to VM or burn to cd (only 566 MG)
+http://www.gtlib.gatech.edu/pub/centos/7.0.1406/isos/x86_64/CentOS-7.0-1406-x86_64-Minimal.iso
+
+#create a VM or put in cd and boot system and install centos
+
+#once installed do the following on the new centos system
+
+# update network configuration
+vi /etc/sysconfig/network-scripts/ifcfg-enp0s3
+#change two lines
+ONBOOT=yes
+#NM_CONTROLLED=no
+
+# reboot network service
+service network restart
+
+# install net-tools (for ifconfig) if you want it???
+#yum install net-tools
+
+# install gui
+yum groupinstall -y basic-desktop desktop-platform x11 fonts 'GNOME Desktop' 'Graphical Administration Tools'
+
+# set runlevel 5 to start x on boot (like inittab in centos 6)
+systemctl set-default graphical.target
+
+# update base (if you want to get the latest...it may take some time)
+yum -y update
+
+# update kernel (if you only want to update kernel)
+yum -y update kernel*
+
+# reboot to get gnome
+reboot
+# startx should start automagically
+# note: if a text interface comes up you must choice each number and hit spacebar to select, then C to continue
+
+# open up a terminal and continue
+yum install yum-plugin-priorities
+yum install epel-release
+
+# set priorites for yum repos
+vi /etc/yum/pluginconf.d/priorities.conf
+[main]
+enabled = 1
+check_obsoletes = 1
+
+# open up each repo in /etc/yum.repos.d and set priority=N where N is between 1 and 99 
+# Centos repos should get low number
+# other repos get higher numbers
+
+# run this command and see if the priorites are correct
+sed -n -e "/^\[/h; /priority *=/{ G; s/\n/ /; s/ity=/ity = /; p }" /etc/yum.repos.d/*.repo | sort -k3n
+priority = 1 [base]
+priority = 1 [updates]
+priority = 2 [centosplus]
+priority = 2 [extras]
+priority = 3 [base-debuginfo]
+priority = 3 [fasttrack]
+priority = 5 [centosplus-source]
+priority = 5 [extras-source]
+priority = 5 [updates-source]
+priority = 20 [epel]
+priority = 21 [epel-debuginfo]
+priority = 21 [epel-source]
+priority = 90 [epel-testing]
+priority = 91 [epel-testing-debuginfo]
+priority = 91 [epel-testing-source]
+
+yum repolist
+#yum check-update
+yum install -y gcc kernel-devel kernel-headers bind-utils nmap dkms make bzip2 perl vim-common vim-enhanced vim-X11 mlocate tree curl wget unzip git git-svn gitk firefox colordiff nautilus-open-terminal xdg-utils 
+
+# add kernel path to bashrc
+vim /root/.bashrc
+
+## Current running kernel on Fedora, CentOS 6 and Red Hat (RHEL) 6 ##
+export KERN_DIR=/usr/src/kernels/$(uname -r)
+
+# exit vim
+
+### note: if you are installing this os on a virtualbox vm  ####
+1. make sure you install virtualbox guest tool
+2. before doing #1 => export MAKE='/usr/bin/gmake -i'
+
+### if you want to disable selinux
+sed -i "s/SELINUX=enforcing/SELINUX=disabled/" /etc/selinux/config
+
+### if you want to change vm swappiness (default is 60)
+echo 10 > /proc/sys/vm/swappiness
+vim /etc/sysctl.conf
+# add an entry => vm.swappiness = 10
+
