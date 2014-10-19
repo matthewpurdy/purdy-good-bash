@@ -1,12 +1,11 @@
-#download centos 6.4 minimal iso and mount it to VM or burn to cd  (only 342M)
-http://centos.mirrorcatalogs.com/6.4/isos/x86_64/CentOS-6.4-x86_64-minimal.iso
 
-#download centos 6.5 minimal iso and mount it to VM or burn to cd (only 398 M)
+
+#download centos 6.5 minimal iso and mount it to VM or burn to cd (only 398 MG)
 http://mirror.umd.edu/centos/6.5/isos/x86_64/CentOS-6.5-x86_64-minimal.iso
 
-#create a VM or put in cd and boot system and install centos 6.4
+#create a VM or put in cd and boot system and install centos
 
-#once installed do the following on the new centos 6.4 system
+#once installed do the following on the new centos system
 
 # update network configuration
 vi /etc/sysconfig/network-scripts/ifcfg-eth0
