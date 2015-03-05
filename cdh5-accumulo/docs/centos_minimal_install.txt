@@ -1,13 +1,13 @@
 
-#download centos 6.4 minimal iso and mount it to VM or burn to cd (only 342M)
-http://centos.mirrorcatalogs.com/6.4/isos/x86_64/CentOS-6.4-x86_64-minimal.iso
-
 #download centos 6.5 minimal iso and mount it to VM or burn to cd (only 398 M)
-http://mirror.umd.edu/centos/6.5/isos/x86_64/CentOS-6.5-x86_64-minimal.iso
+wget http://centos.mirrorcatalogs.com/6.5/isos/x86_64/CentOS-6.5-x86_64-minimal.iso
 
-#create a VM or put in cd and boot system and install centos 6.4
+#download centos 6.6 minimal iso and mount it to VM or burn to cd (only 383 M)
+wget http://mirror.umd.edu/centos/6.6/isos/x86_64/CentOS-6.6-x86_64-minimal.iso
 
-#once installed do the following on the new centos 6.4 system
+#create a VM or put in cd and boot system and install centos <version>
+
+#once installed do the following on the new centos <version> system
 
 # update network configuration
 vi /etc/sysconfig/network-scripts/ifcfg-eth0
@@ -51,7 +51,7 @@ check_obsoletes = 1
 # Centos repos should get low number
 # other repos get higher numbers
 
-# run this command and see if the priorites are correct
+# run this command and see if the priorites are correct (may look different)
 sed -n -e "/^\[/h; /priority *=/{ G; s/\n/ /; s/ity=/ity = /; p }" /etc/yum.repos.d/*.repo | sort -k3n
 priority = 1 [base]
 priority = 1 [updates]
@@ -71,26 +71,34 @@ yum repolist
 yum install -y gcc kernel-devel kernel-headers bind-utils nmap dkms make bzip2 perl vim-common vim-enhanced vim-X11 mlocate tree curl wget unzip git git-svn gitk firefox colordiff nautilus-open-terminal xdg-utils
 yum install -y flash-plugin nspluginwrapper alsa-plugins-pulseaudio libcurl
 curl http://ardownload.adobe.com/pub/adobe/reader/unix/9.x/9.5.5/enu/AdbeRdr9.5.5-1_i486linux_enu.rpm > /tmp/AdbeRdr9.5.5-1_i486linux_enu.rpm
-yum install nspluginwrapper.i686 libcanberra-gtk2.i686 gtk2-engines.i686 PackageKit-gtk-module.i686
 yum localinstall /tmp/AdbeRdr9.5.5-1_i486linux_enu.rpm
-yum install -y vpnc openconnect NetworkManager-openconnect
 
 # add kernel path to bashrc
-vim /root/.bashrc
-
-## Current running kernel on Fedora, CentOS 6 and Red Hat (RHEL) 6 ##
-export KERN_DIR=/usr/src/kernels/$(uname -r)
-
-# exit vim
+echo 'export KERN_DIR=/usr/src/kernels/$(uname -r)' >> /root/.bashrc
 
 ### note: if you are installing this os on a virtualbox vm ####
 1. make sure you install virtualbox guest tool
 2. before doing #1 => export MAKE='/usr/bin/gmake -i'
+
+### if you want to turn off iptables
+service iptables stop
+service ip6tables stop
+chkconfig iptables off
+chkconfig ip6tables off
 
 ### if you want to disable selinux
 sed -i "s/SELINUX=enforcing/SELINUX=disabled/" /etc/selinux/config
 
 ### if you want to change vm swappiness (default is 60)
 echo 10 > /proc/sys/vm/swappiness
-vim /etc/sysctl.conf
-# add an entry => vm.swappiness = 10
+echo '' >> /etc/sysctl.conf
+echo 'vm.swappiness = 10' >> /etc/sysctl.conf
+
+### if you want to disable ssh host key checking
+sed -i "s/# *StrictHostKeyChecking ask/StrictHostKeyChecking no" /etc/ssh/ssh_config
+
+### if you want to install the jdk
+#note you will have to download this thru their web site and accept the license
+wget http://download.oracle.com/otn-pub/java/jdk/7u75-b13/jdk-7u75-linux-x64.rpm
+yum localinstall -y ~/Downloads/jdk-7u75-linux-x64.rpm
+
