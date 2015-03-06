@@ -8,14 +8,39 @@ sed -i "s/SELINUX=enforcing/SELINUX=disabled/" /etc/selinux/config
 # change vm swappiness
 ################################################
 echo 2 > /proc/sys/vm/swappiness
-vim /etc/sysctl.conf
-# add an entry => vm.swappiness = 2
+echo '' >> /etc/sysctl.conf
+echo 'vm.swappiness = 2' >> /etc/sysctl.conf
+
+################################################
+# turn off iptables
+################################################
+# turn iptables off
+service iptables stop
+service ip6tables stop
+chkconfig iptables off
+chkconfig ip6tables off
+
+################################################
+# setup passwordless ssh
+################################################
+
+# edit /etc/ssh/ssh_config and set StrictHostKeyChecking from ask to no
+sed -i "s/# *StrictHostKeyChecking ask/StrictHostKeyChecking no" /etc/ssh/ssh_config
+
+# create root ssh keys
+ssh-keygen -t rsa -P '' -f ~/.ssh/id_rsa
+cat ~/.ssh/id_rsa.pub >> ~/.ssh/authorized_keys
+chmod 600 ~/.ssh/authorized_keys
+
+# test keys by sshing without a password to localhost
+ssh localhost
+exit
 
 ################################################
 # download java sdk and extract the rpm
 ################################################
 cd ~/Downloads
-wget http://download.oracle.com/otn-pub/java/jdk/7u67-b01/jdk-7u67-linux-x64.rpm
+wget http://download.oracle.com/otn-pub/java/jdk/7u75-b13/jdk-7u75-linux-x64.rpm
 rpm -e jdk sun-javadb-common sun-javadb-core sun-javadb-client sun-javadb-demo sun-javadb-docs sun-javadb-javadoc
 
 ################################################
@@ -73,38 +98,34 @@ yum clean all
 yum repolist
 
 ################################################
-# install jdk, zookeeper, hadoop, and accumulo binaries
+# install jdk, zookeeper, hadoop, accumulo, and other binaries
 ################################################
-yum install -y jdk hadoop-conf-pseudo zookeeper-server 
-yum install -y accumulo-master accumulo-monitor accumulo-gc accumulo-tracer accumulo-tserver accumulo-logger accumulo
+yum install -y jdk
+yum install -y zookeeper-server
+yum install -y hadoop-conf-pseudo hadoop-client
+yum install -y sqoop
+yum install -y hue hue-common
+yum install -y accumulo-master accumulo-monitor accumulo-gc accumulo-tracer accumulo-tserver
+yum install -y oozie oozie-client
+yum install -y pig
+
 
 ################################################
-# setup hadoop and accumulo with ssh
+# configure bashrc
 ################################################
+export JAVA_HOME=/usr/java/default
+export HADOOP_HOME=/usr/lib/hadoop
+export HADOOP_CLIENT_HOME=/usr/lib/hadoop/client
+export HADOOP_CONF_DIR=/etc/hadoop/conf
+export HADOOP_COMMON_HOME=$HADOOP_HOME
+export HADOOP_MAPRED_HOME=/usr/lib/hadoop-mapreduce
+export YARN_CONF_DIR=$HADOOP_CONF_DIR
+export ACCUMULO_HOME=/usr/lib/accumulo
+export ACCUMULO_CONF_DIR=/etc/accumulo/conf
+export ZOOKEEPER_HOME=/usr/lib/zookeeper
+export BASE_PATH=/usr/lib64/qt-3.3/bin:/usr/local/sbin:/usr/sbin:/sbin:/usr/local/bin:/usr/bin:/bin:$HOME/bin
+export PATH=$BASE_PATH:$ACCUMULO_HOME/bin:$HADOOP_CLIENT_HOME/bin:$HADOOP_HOME/bin:$ZOOKEEPER_HOME/bin
 
-# turn iptables off
-service iptables stop
-service ip6tables stop
-chkconfig iptables off
-chkconfig ip6tables off
-
-# turn all accumulo service off from starting at boot time
-# you need to use a script to start/stop the accumulo services
-# note: zookeeper and hadoop service are okay to start at boot time 
-# however accumulo seems to trip over itself on a pseudo cluster
-for x in $(ls /etc/init.d | grep accumulo); do echo $x; chkconfig $x off; done
-
-# edit /etc/ssh/ssh_config and set StrictHostKeyChecking from ask to no
-sed -i "s/# *StrictHostKeyChecking ask/StrictHostKeyChecking no" /etc/ssh/ssh_config
-
-# create root ssh keys
-ssh-keygen -t rsa -P '' -f ~/.ssh/id_rsa
-cat ~/.ssh/id_rsa.pub >> ~/.ssh/authorized_keys
-chmod 600 ~/.ssh/authorized_keys
-
-# test keys by sshing without a password to localhost
-ssh localhost
-exit
 
 ###############################################
 # configure hadoop
@@ -126,10 +147,10 @@ sudo -u hdfs hdfs dfs -chmod -R 1777 /tmp
 sudo -u hdfs hdfs dfs -mkdir -p /var/log/hadoop-yarn
 sudo -u hdfs hdfs dfs -chown yarn:mapred /var/log/hadoop-yarn
 sudo -u hdfs hdfs dfs -mkdir -p /var/log/yarn
-sudo -u hdfs hdfs dfs -chown yarn:mapred /var/log/hadoop-yarn
+sudo -u hdfs hdfs dfs -chown yarn:mapred /var/log/yarn
 
 # verify hdfs file structure
-sudo -u hdfs hadoop fs -ls -R /
+sudo -u hdfs hdfs dfs -ls -R /
 
 # create user directories
 sudo -u hdfs hdfs dfs -mkdir -p /user/root
@@ -139,12 +160,15 @@ sudo -u hdfs hdfs dfs -chmod 755 /user/root
 # start mapred from service
 for x in $(cd /etc/init.d; ls hadoop-yarn-*); do sudo service $x start; done
 
+# start history services
+service hadoop-mapreduce-historyserver start
+
 ################################################
 # configure zookeeper
 ################################################
 
-# ignore No myid comment when running the next line
-service zookeeper-server init 
+# intialized zookeeper
+service zookeeper-server init --myid 1
 
 ################################################
 # configure accumulo
@@ -162,16 +186,35 @@ service zookeeper-server init
 # i would cut them in half if running a development vm under 8 gigs
 # you may need to reduce them
 
+# create symbolic line for accumulo logs
+cd $ACCUMULO_HOME
+ln -s /var/log/accumulo logs
+
+# create write ahead log
+mkdir -p /var/lib/accumulo/walogs
+chmod 1777 /var/lib/accumulo/walogs
+
 # create accumulo directories in hdfs
 sudo -u hdfs hdfs dfs -mkdir /accumulo
-sudo -u hdfs hdfs dfs -chown accumulo:supergroup /accumulo
+sudo -u hdfs hdfs dfs -chown accumulo /accumulo
 sudo -u hdfs hdfs dfs -chmod 755 /accumulo
-sudo -u hdfs hdfs dfs -mkdir -p /user/accumulo
-sudo -u hdfs hdfs dfs -chown accumulo:supergroup /user/accumulo
-sudo -u hdfs hdfs dfs -chmod 755 /user/accumulo
 
-# export hadoop client home into bashrc; this is need to use yarn
-export HADOOP_CLIENT_HOME=/usr/lib/hadoop/client >> /root/.bashrc
+# delay accumulo service start to allow zookeeper and hadoop to start on boot
+mv /etc/rc3.d/S85accumulo-master /etc/rc3.d/S99accumulo-master
+mv /etc/rc4.d/S85accumulo-master /etc/rc4.d/S99accumulo-master
+mv /etc/rc5.d/S85accumulo-master /etc/rc5.d/S99accumulo-master
+mv /etc/rc3.d/S85accumulo-monitor /etc/rc3.d/S99accumulo-monitor
+mv /etc/rc4.d/S85accumulo-monitor /etc/rc4.d/S99accumulo-monitor
+mv /etc/rc5.d/S85accumulo-monitor /etc/rc5.d/S99accumulo-monitor
+mv /etc/rc3.d/S85accumulo-gc /etc/rc3.d/S99accumulo-gc
+mv /etc/rc4.d/S85accumulo-gc /etc/rc4.d/S99accumulo-gc
+mv /etc/rc5.d/S85accumulo-gc /etc/rc5.d/S99accumulo-gc
+mv /etc/rc3.d/S85accumulo-tracer /etc/rc3.d/S99accumulo-tracer
+mv /etc/rc4.d/S85accumulo-tracer /etc/rc4.d/S99accumulo-tracer
+mv /etc/rc5.d/S85accumulo-tracer /etc/rc5.d/S99accumulo-tracer
+mv /etc/rc3.d/S85accumulo-tserver /etc/rc3.d/S99accumulo-tserver
+mv /etc/rc4.d/S85accumulo-tserver /etc/rc4.d/S99accumulo-tserver
+mv /etc/rc5.d/S85accumulo-tserver /etc/rc5.d/S99accumulo-tserver
 
 # initialized accumulo master
 service accumulo-master init
@@ -179,29 +222,26 @@ service accumulo-master init
 ################################################
 # start services
 ################################################
-#
-# you should create a script that starts these services and sleeps enough time
-# to make sure they are all started correctly (see scripts)
-#
 
 # start zookeeper service
 service zookeeper-server start
 
 # start hadoop services (these should already be started)
-service hadoop-hdfs-namenode start
-service hadoop-hdfs-secondarynamenode start
-service hadoop-hdfs-datanode start
-
-service hadoop-mapreduce-historyserver start
-service hadoop-yarn-nodemanager start
-service hadoop-yarn-resourcemanager start
+for x in $(cd /etc/init.d; ls hadoop-*); do service $x start; done
 
 # start accumulo services
-service accumulo-master start
-service accumulo-monitor start
-service accumulo-gc start
-service accumulo-tracer start
-service accumulo-tserver start
+for x in $(cd /etc/init.d; ls accumulo-*); do service $x start; done
+
+################################################
+# configure hue
+################################################
+service hue start
+
+#using browser goto http://localhost:8888
+
+# setup user account
+# username => root
+# password => toor
 
 ################################################
 # hadoop smoke test
@@ -253,4 +293,14 @@ getauths
 
 # scan to see new inputed records
 scan
+
+
+################################################
+# cdh5 links
+################################################
+accumulo master    => http://localhost:50095
+resource master    => http://localhost:8088/cluster
+namenode           => http://localhost:50070
+job history server => http://localhost:19888
+hue server         => http://localhost:8888
 
