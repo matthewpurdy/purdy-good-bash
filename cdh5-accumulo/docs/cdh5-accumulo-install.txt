@@ -131,6 +131,10 @@ export PATH=$BASE_PATH:$ACCUMULO_HOME/bin:$HADOOP_CLIENT_HOME/bin:$HADOOP_HOME/b
 # configure hadoop
 ################################################
 
+# added the following properties to hdfs-site.xml
+# dfs.datanode.synconclose => true
+# dfs.webhdfs.enabled      => true
+
 # export hadoop client home; this is need to use yarn
 export HADOOP_CLIENT_HOME=/usr/lib/hadoop/client
 
@@ -169,6 +173,8 @@ service hadoop-mapreduce-historyserver start
 
 # intialized zookeeper
 service zookeeper-server init --myid 1
+
+service zookeeper-server start
 
 ################################################
 # configure accumulo
@@ -250,8 +256,7 @@ service hue start
 find / > find-data.txt
 # replace all '/' with ' ' in find-data.txt
 sed -i "s/\// /g" find-data.txt
-hdfs dfs -mkdir find
-hdfs dfs -mkdir find/input
+hdfs dfs -mkdir -p find/input
 hdfs dfs -put find-data.txt find/input
 hadoop jar /usr/lib/hadoop-mapreduce/hadoop-mapreduce-examples.jar wordcount find/input find/output
 hdfs dfs -cat find/output/part-r-00000 > /tmp/part-r-00000.txt
