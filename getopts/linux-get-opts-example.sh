@@ -6,7 +6,7 @@
 
 function usage() {
   cat << EOF
-  usage: $0 <message> 
+  usage: $0 -m <message> 
 
   this script uses arguments from command line and runs echos arguments
 
