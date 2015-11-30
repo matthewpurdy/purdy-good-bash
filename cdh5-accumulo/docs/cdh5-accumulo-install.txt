@@ -25,7 +25,7 @@ chkconfig ip6tables off
 ################################################
 
 # edit /etc/ssh/ssh_config and set StrictHostKeyChecking from ask to no
-sed -i "s/# *StrictHostKeyChecking ask/StrictHostKeyChecking no" /etc/ssh/ssh_config
+sed -i "s/# *StrictHostKeyChecking ask/StrictHostKeyChecking no"/ /etc/ssh/ssh_config
 
 # create root ssh keys
 ssh-keygen -t rsa -P '' -f ~/.ssh/id_rsa
@@ -105,13 +105,17 @@ yum install -y zookeeper-server
 yum install -y hadoop-conf-pseudo hadoop-client
 yum install -y sqoop
 yum install -y hue hue-common
-yum install -y accumulo-master accumulo-monitor accumulo-gc accumulo-tracer accumulo-tserver
+#yum install -y accumulo-master accumulo-monitor accumulo-gc accumulo-tracer accumulo-tserver
 yum install -y oozie oozie-client
 yum install -y pig
 
+yum install spark-master spark-python spark-worker spark-core
+
+
+# **** downloaded the latest version of accumulo and untar it to /opt
 
 ################################################
-# configure bashrc
+# configure bashrc mapreduce 2 (yarn)
 ################################################
 export JAVA_HOME=/usr/java/default
 export HADOOP_HOME=/usr/lib/hadoop
@@ -120,8 +124,8 @@ export HADOOP_CONF_DIR=/etc/hadoop/conf
 export HADOOP_COMMON_HOME=$HADOOP_HOME
 export HADOOP_MAPRED_HOME=/usr/lib/hadoop-mapreduce
 export YARN_CONF_DIR=$HADOOP_CONF_DIR
-export ACCUMULO_HOME=/usr/lib/accumulo
-export ACCUMULO_CONF_DIR=/etc/accumulo/conf
+export ACCUMULO_HOME=/opt/accumulo
+export ACCUMULO_CONF_DIR=/opt/accumulo/conf
 export ZOOKEEPER_HOME=/usr/lib/zookeeper
 export BASE_PATH=/usr/lib64/qt-3.3/bin:/usr/local/sbin:/usr/sbin:/sbin:/usr/local/bin:/usr/bin:/bin:$HOME/bin
 export PATH=$BASE_PATH:$ACCUMULO_HOME/bin:$HADOOP_CLIENT_HOME/bin:$HADOOP_HOME/bin:$ZOOKEEPER_HOME/bin
@@ -180,21 +184,17 @@ service zookeeper-server start
 # configure accumulo
 ################################################
 
-# verify the setting in /etc/accumulo/conf/accumulo-site.xml
-# logger.dir.walog and instance.secret you may want to change
-# if you change the logger.dir.walog make sure that directory
-# is created on all nodes with mode of 1777
-# WARNING => the memory setting may be too high for one node
-# i would cut them in half if running a development vm under 8 gig
+cp -r /opt/accumulo/conf/examples/2GB/standalone/* /opt/accumulo/conf/
 
-# verify the setting in /etc/default/accumulo
-# WARNING => the memory setting expect to have 7+ gig of ram available
-# i would cut them in half if running a development vm under 8 gigs
-# you may need to reduce them
-
-# create symbolic line for accumulo logs
-cd $ACCUMULO_HOME
-ln -s /var/log/accumulo logs
+# change the general.classpath property values for hadoop jars to the following:
+#      <!-- cdh 5.4 requirements -->
+#      /usr/lib/hadoop/[^.].*.jar,
+#      /usr/lib/hadoop/lib/[^.].*.jar,
+#      /usr/lib/hadoop/client/[^.].*.jar,
+#      /usr/lib/hadoop-hdfs/[^.].*.jar,
+#      /usr/lib/hadoop-mapreduce/[^.].*.jar,
+#      /usr/lib/hadoop-yarn/[^.].*.jar,
+#      /usr/lib/hadoop-yarn/lib/jersey.*.jar,
 
 # create write ahead log
 mkdir -p /var/lib/accumulo/walogs
@@ -202,28 +202,13 @@ chmod 1777 /var/lib/accumulo/walogs
 
 # create accumulo directories in hdfs
 sudo -u hdfs hdfs dfs -mkdir /accumulo
-sudo -u hdfs hdfs dfs -chown accumulo /accumulo
+sudo -u hdfs hdfs dfs -chown root /accumulo
 sudo -u hdfs hdfs dfs -chmod 755 /accumulo
 
-# delay accumulo service start to allow zookeeper and hadoop to start on boot
-mv /etc/rc3.d/S85accumulo-master /etc/rc3.d/S99accumulo-master
-mv /etc/rc4.d/S85accumulo-master /etc/rc4.d/S99accumulo-master
-mv /etc/rc5.d/S85accumulo-master /etc/rc5.d/S99accumulo-master
-mv /etc/rc3.d/S85accumulo-monitor /etc/rc3.d/S99accumulo-monitor
-mv /etc/rc4.d/S85accumulo-monitor /etc/rc4.d/S99accumulo-monitor
-mv /etc/rc5.d/S85accumulo-monitor /etc/rc5.d/S99accumulo-monitor
-mv /etc/rc3.d/S85accumulo-gc /etc/rc3.d/S99accumulo-gc
-mv /etc/rc4.d/S85accumulo-gc /etc/rc4.d/S99accumulo-gc
-mv /etc/rc5.d/S85accumulo-gc /etc/rc5.d/S99accumulo-gc
-mv /etc/rc3.d/S85accumulo-tracer /etc/rc3.d/S99accumulo-tracer
-mv /etc/rc4.d/S85accumulo-tracer /etc/rc4.d/S99accumulo-tracer
-mv /etc/rc5.d/S85accumulo-tracer /etc/rc5.d/S99accumulo-tracer
-mv /etc/rc3.d/S85accumulo-tserver /etc/rc3.d/S99accumulo-tserver
-mv /etc/rc4.d/S85accumulo-tserver /etc/rc4.d/S99accumulo-tserver
-mv /etc/rc5.d/S85accumulo-tserver /etc/rc5.d/S99accumulo-tserver
-
 # initialized accumulo master
-service accumulo-master init
+/opt/accumulo/bin/accumulo init
+
+# use root/toor for user/password
 
 ################################################
 # start services
@@ -235,8 +220,8 @@ service zookeeper-server start
 # start hadoop services (these should already be started)
 for x in $(cd /etc/init.d; ls hadoop-*); do service $x start; done
 
-# start accumulo services
-for x in $(cd /etc/init.d; ls accumulo-*); do service $x start; done
+# start accumulo services (no service - only script)
+/opt/accumulo/bin/start-here.sh
 
 ################################################
 # configure hue
@@ -308,4 +293,5 @@ resource master    => http://localhost:8088/cluster
 namenode           => http://localhost:50070
 job history server => http://localhost:19888
 hue server         => http://localhost:8888
+hue server jobs    => http://localhost:8888/jobbrowser
 

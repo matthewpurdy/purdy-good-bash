@@ -5,6 +5,9 @@ wget http://centos.mirrorcatalogs.com/6.5/isos/x86_64/CentOS-6.5-x86_64-minimal.
 #download centos 6.6 minimal iso and mount it to VM or burn to cd (only 383 M)
 wget http://mirror.umd.edu/centos/6.6/isos/x86_64/CentOS-6.6-x86_64-minimal.iso
 
+#download centos 6.7 minimal iso and mount it to VM or burn to cd (only 395 M)
+wget http://linux.mirrors.es.net/centos/6.7/isos/x86_64/CentOS-6.7-x86_64-minimal.iso
+
 #create a VM or put in cd and boot system and install centos <version>
 
 #once installed do the following on the new centos <version> system
@@ -95,7 +98,7 @@ echo '' >> /etc/sysctl.conf
 echo 'vm.swappiness = 10' >> /etc/sysctl.conf
 
 ### if you want to disable ssh host key checking
-sed -i "s/# *StrictHostKeyChecking ask/StrictHostKeyChecking no" /etc/ssh/ssh_config
+sed -i "s/# *StrictHostKeyChecking ask/StrictHostKeyChecking no/" /etc/ssh/ssh_config
 
 ### if you want to install the jdk
 #note you will have to download this thru their web site and accept the license
