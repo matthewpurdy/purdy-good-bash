@@ -91,3 +91,7 @@ echo 10 > /proc/sys/vm/swappiness
 vim /etc/sysctl.conf
 # add an entry => vm.swappiness = 10
 
+# change mouse focus
+gsettings list-recursively | grep 'raise\|focus' | grep pref
+gsettings set org.gnome.desktop.wm.preferences focus-mode 'mouse'
+
